@@ -1,0 +1,8 @@
+/.vs
+/.idea
+/obj
+/bin
+/packages
+
+*.csproj.user
+*.DotSettings.user

@@ -1,0 +1,8 @@
+<Solution>
+  <Configurations>
+    <BuildType Name="1.6" />
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
+  </Configurations>
+  <Project Path="EmergencyTransfusion.csproj" />
+</Solution>

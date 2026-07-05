@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ModMetaData>
+  <name>Emergency Transfusions</name>
+  <author>Pausbrak</author>
+  <packageId>Pausbrak.EmergencyTransfusions</packageId>
+  <modVersion IgnoreIfNoMatchingField="True">1.0.0</modVersion>
+  <url>https://github.com/RadHazard/EmergencyTransfusion</url>
+  <supportedVersions>
+    <li>1.6</li>
+  </supportedVersions>
+  <description>Perform emergency blood transfusions!
+
+Similar to the drafted "tend now" command, you can now command your doctors to perform an emergency blood transfusion.  Emergency transfusions use 1 hemogen pack, take the same time and restore the same amount of blood as a normal transfusion (35% blood loss).  However, doctors can do it in the field and can use hemogen packs in their inventory, which can save precious seconds when your best pawns are bleeding out.
+
+Additionally, this mod adds an option to have pawns carry hemogen packs in their inventories, found in the assign screen next to medicine.</description>
+</ModMetaData>
