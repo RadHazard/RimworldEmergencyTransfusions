@@ -23,70 +23,66 @@ public class FloatMenuOptionProvider_EmergencyTransfusion : FloatMenuOptionProvi
         return !context.FirstSelectedPawn.IsMutant || context.FirstSelectedPawn.mutant.Def.canTend;
     }
 
-    public override IEnumerable<FloatMenuOption> GetOptionsFor(
+    public override bool TargetPawnValid(Pawn pawn, FloatMenuContext context)
+    {
+        return base.TargetPawnValid(pawn, context) &&
+               IsValidTransfusionTarget(context.FirstSelectedPawn, pawn) &&
+               pawn.health.hediffSet.HasHediff(HediffDefOf.BloodLoss);
+    }
+
+    protected override FloatMenuOption? GetSingleOptionFor(
         Pawn clickedPawn,
         FloatMenuContext context)
     {
-        if (IsValidTransfusionTarget(context.FirstSelectedPawn, clickedPawn))
+        var bloodLoss = clickedPawn.health.hediffSet.GetFirstHediffOfDef(HediffDefOf.BloodLoss);
+        if (bloodLoss == null) return null;
+        
+        if (bloodLoss.Severity < 0.15)
+            return new FloatMenuOption(
+                "ET_CannotTransfuse".Translate(clickedPawn) + ": " +
+                "ET_TransfusionNotRequired".Translate(clickedPawn),
+                null);
+        if (context.FirstSelectedPawn.WorkTypeIsDisabled(WorkTypeDefOf.Doctor))
+            return new FloatMenuOption(
+                "ET_CannotTransfuse".Translate(clickedPawn) + ": " +
+                "CannotPrioritizeWorkTypeDisabled".Translate(WorkTypeDefOf.Doctor.gerundLabel),
+                null);
+        if (!context.FirstSelectedPawn.CanReach(clickedPawn, PathEndMode.ClosestTouch, Danger.Deadly))
+            return new FloatMenuOption(
+                "ET_CannotTransfuse".Translate(clickedPawn) + ": " +
+                "NoPath".Translate().CapitalizeFirst(),
+                null);
+        if (clickedPawn.InAggroMentalState && !clickedPawn.health.hediffSet.HasHediff(HediffDefOf.Scaria))
+            return new FloatMenuOption(
+                "ET_CannotTransfuse".Translate(clickedPawn) + ": " +
+                "PawnIsInAggroMentalState".Translate(clickedPawn).CapitalizeFirst(),
+                null);
+        
+        var bloodpack = FindBloodpack(context.FirstSelectedPawn, clickedPawn);
+        if (bloodpack == null)
         {
-            var bloodLoss = clickedPawn.health.hediffSet.GetFirstHediffOfDef(HediffDefOf.BloodLoss);
+            return new FloatMenuOption(
+                "ET_CannotTransfuse".Translate(clickedPawn) + ": " +
+                "ET_NoBlood".Translate().CapitalizeFirst(),
+                null);
+        }
 
-            if (bloodLoss == null || bloodLoss.Severity < 0.15)
-            {
-                if (context.FirstSelectedPawn != clickedPawn)
-                    yield return new FloatMenuOption(
-                        "ET_CannotTransfuse".Translate(clickedPawn) + ": " +
-                        "ET_TransfusionNotRequired".Translate(clickedPawn),
-                        null);
-            }
-            else if (context.FirstSelectedPawn.WorkTypeIsDisabled(WorkTypeDefOf.Doctor))
-                yield return new FloatMenuOption(
-                    "ET_CannotTransfuse".Translate(clickedPawn) + ": " +
-                    "CannotPrioritizeWorkTypeDisabled".Translate(WorkTypeDefOf.Doctor.gerundLabel),
-                    null);
-            else if (!context.FirstSelectedPawn.CanReach(clickedPawn, PathEndMode.ClosestTouch, Danger.Deadly))
-                yield return new FloatMenuOption(
-                    "ET_CannotTransfuse".Translate(clickedPawn) + ": " +
-                    "NoPath".Translate().CapitalizeFirst(),
-                    null);
-            else if (clickedPawn.InAggroMentalState && !clickedPawn.health.hediffSet.HasHediff(HediffDefOf.Scaria))
-            {
-                yield return new FloatMenuOption(
-                    "ET_CannotTransfuse".Translate(clickedPawn) + ": " +
-                    "PawnIsInAggroMentalState".Translate(clickedPawn).CapitalizeFirst(),
-                    null);
-            }
-            else
-            {
-                var bloodpack = FindBloodpack(context.FirstSelectedPawn, clickedPawn);
-                if (bloodpack == null)
-                {
-                    yield return new FloatMenuOption(
-                        "ET_CannotTransfuse".Translate(clickedPawn) + ": " +
-                        "ET_NoBlood".Translate().CapitalizeFirst(),
-                        null);
-                }
-                else
-                {
-                    yield return FloatMenuUtility.DecoratePrioritizedTask(
-                        new FloatMenuOption("ET_Transfuse".Translate(clickedPawn), Transfuse),
-                        context.FirstSelectedPawn, clickedPawn);
+        return FloatMenuUtility.DecoratePrioritizedTask(
+            new FloatMenuOption("ET_Transfuse".Translate(clickedPawn), Transfuse),
+            context.FirstSelectedPawn, clickedPawn);
 
-                    void Transfuse()
-                    {
-                        var job = JobMaker.MakeJob(EmergencyTransfusion_DefOf.ET_TransfuseBlood, clickedPawn, bloodpack);
-                        job.count = 1;
-                        job.draftedTend = true;
-                        context.FirstSelectedPawn.jobs.TryTakeOrderedJob(job);
-                    }
-                }
-            }
+        void Transfuse()
+        {
+            var job = JobMaker.MakeJob(EmergencyTransfusion_DefOf.ET_TransfuseBlood, clickedPawn, bloodpack);
+            job.count = 1;
+            job.draftedTend = true;
+            context.FirstSelectedPawn.jobs.TryTakeOrderedJob(job);
         }
     }
 
     /// <summary>
     /// Checks whether we can ever apply a transfusion to the target.  Does not check if they actually need it,
-    /// only if we could potentially give one (i.e. they aren't a hostile). 
+    /// only if we could potentially give one (i.e. they aren't an animal or a hostile). 
     /// Derived from a similar method in FloatMenuOptionProvider_DraftedTend
     /// </summary>
     /// <param name="doctor">The pawn performing the transfusion</param>
@@ -94,13 +90,13 @@ public class FloatMenuOptionProvider_EmergencyTransfusion : FloatMenuOptionProvi
     /// <returns>True if we can potentially perform the transfusion</returns>
     private static bool IsValidTransfusionTarget(Pawn doctor, Pawn patient)
     {
-        return patient.Downed || !patient.HostileTo(doctor.Faction) &&
+        return patient.health.CanBleed &&
+            !patient.IsAnimal &&
+            (patient.Downed || !patient.HostileTo(doctor.Faction)) &&
             (patient.IsColonist ||
              patient.IsQuestLodger() ||
              patient.IsPrisonerOfColony ||
-             patient.IsSlaveOfColony ||
-             patient.IsAnimal && patient.Faction == Faction.OfPlayer ||
-             patient.IsColonySubhuman && patient.mutant.Def.entitledToMedicalCare);
+             patient.IsSlaveOfColony);
     }
 
     /// <summary>
@@ -145,43 +141,5 @@ public class FloatMenuOptionProvider_EmergencyTransfusion : FloatMenuOptionProvi
         {
             return inventory.FirstOrDefault(t => t.def == ThingDefOf.HemogenPack && CanReserve(t));
         }
-    }
-
-    //TODO
-    protected override FloatMenuOption GetSingleOptionFor(
-        Thing clickedThing,
-        FloatMenuContext context)
-    {
-        Building_HoldingPlatform holdingPlatform = clickedThing as Building_HoldingPlatform;
-        if (holdingPlatform == null)
-            return (FloatMenuOption)null;
-        Pawn heldPawn = holdingPlatform.HeldPawn;
-        if (heldPawn == null)
-            return (FloatMenuOption)null;
-        if (!HealthAIUtility.ShouldBeTendedNowByPlayer(heldPawn))
-            return (FloatMenuOption)null;
-        if (context.FirstSelectedPawn.WorkTypeIsDisabled(WorkTypeDefOf.Doctor))
-            return new FloatMenuOption(
-                (string)("CannotTransfuse".Translate((NamedArgument)(Thing)heldPawn) + ": " +
-                         "CannotPrioritizeWorkTypeDisabled".Translate(
-                             (NamedArgument)WorkTypeDefOf.Doctor.gerundLabel)), (Action)null);
-        if (!context.FirstSelectedPawn.CanReach((LocalTargetInfo)(Thing)heldPawn, PathEndMode.ClosestTouch,
-                Danger.Deadly))
-            return new FloatMenuOption(
-                (string)("CannotTransfuse".Translate((NamedArgument)(Thing)heldPawn) + ": " +
-                         "NoPath".Translate().CapitalizeFirst()), (Action)null);
-        Thing medicine = HealthAIUtility.FindBestMedicine(context.FirstSelectedPawn, heldPawn);
-        return FloatMenuUtility.DecoratePrioritizedTask(new FloatMenuOption(
-            (string)"Tend".Translate((NamedArgument)heldPawn.LabelShort), (Action)(() =>
-            {
-                JobDef tendEntity = JobDefOf.TendEntity;
-                LocalTargetInfo targetA = (LocalTargetInfo)(Thing)holdingPlatform;
-                Thing thing = medicine;
-                LocalTargetInfo targetB = thing != null ? (LocalTargetInfo)thing : LocalTargetInfo.Invalid;
-                Job job = JobMaker.MakeJob(tendEntity, targetA, targetB);
-                job.count = 1;
-                job.draftedTend = true;
-                context.FirstSelectedPawn.jobs.TryTakeOrderedJob(job);
-            })), context.FirstSelectedPawn, (LocalTargetInfo)(Thing)holdingPlatform);
     }
 }

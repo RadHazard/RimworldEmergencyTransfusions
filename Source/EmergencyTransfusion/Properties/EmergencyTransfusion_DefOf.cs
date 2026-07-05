@@ -13,6 +13,6 @@ namespace EmergencyTransfusion.Properties
         }
         
         [UsedImplicitly]
-        public static JobDef ET_TransfuseBlood;
+        public static JobDef ET_TransfuseBlood = null!;
     }
 }
