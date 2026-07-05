@@ -3,7 +3,7 @@
 
   <JobDef>
     <defName>ET_TransfuseBlood</defName>
-    <driverClass>JobDriver_EmergencyTransfusion</driverClass>
+    <driverClass>EmergencyTransfusion.JobDriver_EmergencyTransfusion</driverClass>
     <reportString>giving blood transfusion to TargetA.</reportString>
     <casualInterruptible>false</casualInterruptible>
     <suspendable>false</suspendable>
