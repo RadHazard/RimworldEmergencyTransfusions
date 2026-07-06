@@ -66,6 +66,7 @@
         <Compile Include="FloatMenuOptionProvider_EmergencyTransfusion.cs" />
         <Compile Include="JobDriver_EmergencyTransfusion.cs" />
         <Compile Include="Properties\AssemblyInfo.cs"/>
+        <Compile Include="Toils_ET.cs" />
     </ItemGroup>
     <ItemGroup>
       <None Include="packages.config" />

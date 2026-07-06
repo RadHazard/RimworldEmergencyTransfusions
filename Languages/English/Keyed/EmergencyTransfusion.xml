@@ -1,9 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <LanguageData>
 
-  <ET_Transfuse>Perform emergency blood transfusion</ET_Transfuse>
-  <ET_CannotTransfuse>Can't transfuse blood</ET_CannotTransfuse>
+  <ET_TransfuseOne>Give transfusion to {0} (1 pack)</ET_TransfuseOne>
+  <ET_TransfuseMultiple>Give transfusion to {0} ({1} packs)</ET_TransfuseMultiple>
+  <ET_CannotTransfuse>Can't give {0} blood</ET_CannotTransfuse>
   <ET_TransfusionNotRequired>{0} does not have significant blood loss</ET_TransfusionNotRequired>
   <ET_NoBlood>No hemogen packs available</ET_NoBlood>
+  <ET_NotEnoughBlood>Can't transfuse more than 1 hemogen pack: Not enough hemogen packs available</ET_NotEnoughBlood>
 
 </LanguageData>

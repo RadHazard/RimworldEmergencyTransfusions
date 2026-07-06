@@ -17,14 +17,7 @@ public class JobDriver_EmergencyTransfusion : JobDriver
     
     private PathEndMode pathEndMode;
     
-    protected Thing Bloodpack => job.targetB.Thing;
-
     protected Pawn Patient => job.targetA.Pawn;
-
-    protected bool IsBloodInDoctorInventory => pawn.inventory.Contains(Bloodpack);
-
-    protected Pawn_InventoryTracker? BloodHolderInventory =>
-        Bloodpack.ParentHolder as Pawn_InventoryTracker;
 
     protected Pawn OtherPawnBloodHolder => job.targetC.Pawn;
 
@@ -50,9 +43,11 @@ public class JobDriver_EmergencyTransfusion : JobDriver
         if (!pawn.Reserve(Patient, job, errorOnFailed: errorOnFailed))
             return false;
 
-        var available = pawn.Map.reservationManager.CanReserveStack(pawn, (LocalTargetInfo)Bloodpack, 10);
-        if (available <= 0 || !pawn.Reserve(Bloodpack, job, 10, 1, errorOnFailed: errorOnFailed))
-            return false;
+        for (var i = 0; i < job.targetQueueB.Count; i++)
+        {
+            if (!pawn.Reserve(job.targetQueueB[i], job, 10, job.countQueue[i]))
+                return false;
+        }
 
         return true;
     }
@@ -63,30 +58,51 @@ public class JobDriver_EmergencyTransfusion : JobDriver
         this.FailOnAggroMentalState(PatientIndex);
 
         // Collect the blood
-        var gotoPatient = Toils_Goto.GotoThing(PatientIndex, pathEndMode);
-        var gotoBloodHolder = Toils_Goto.GotoThing(BloodHolderIndex, PathEndMode.Touch)
-            .FailOn(() => OtherPawnBloodHolder != BloodHolderInventory?.pawn || OtherPawnBloodHolder.IsForbidden(pawn));
-        yield return Toils_Jump.JumpIf(gotoPatient, () => IsBloodInDoctorInventory);
-        yield return Toils_Haul.CheckItemCarriedByOtherPawn(Bloodpack, TargetIndex.C, gotoBloodHolder);
-        // Blood is on the ground
-        yield return Toils_Goto.GotoThing(BloodIndex, PathEndMode.ClosestTouch)
-            .FailOnDespawnedNullOrForbidden(BloodIndex);
-        yield return Toils_Haul.StartCarryThing(BloodIndex, failIfStackCountLessThanJobCount: true);
-        yield return Toils_Jump.Jump(gotoPatient);
-        // Blood is being carried by pack animal
-        yield return gotoBloodHolder;
-        yield return Toils_General.Wait(25).WithProgressBarToilDelay(BloodHolderIndex);
-        yield return Toils_Haul.TakeFromOtherInventory(Bloodpack, pawn.inventory.innerContainer,
-            BloodHolderInventory?.innerContainer, 1, BloodHolderIndex);
-        
+        foreach (var toil in CollectBloodToils()) yield return toil;
+
         // Transfuse into patient
-        yield return gotoPatient;
+        yield return Toils_Goto.GotoThing(PatientIndex, pathEndMode);
+        //TODO - this checks the operation speed when the pawn starts the job, not when they actually reach the patient
+        //we need to make a custom wait toil to fix this
         var duration = (int)(ET_DefOf.BloodTransfusion.workAmount / pawn.GetStatValue(ET_DefOf.MedicalOperationSpeed));
         yield return Toils_General.WaitWith(PatientIndex, duration,
             true, true, true, PatientIndex)
             .WithEffect(() => EffecterDefOf.Surgery, PatientIndex)
             .PlaySustainerOrSound(SoundDefOf.Recipe_Surgery);
         yield return PerformTransfusion(duration);
+    }
+
+    /// <summary>
+    /// Makes a loop of toils for collecting all the blood packs
+    /// </summary>
+    /// <returns>The collection toils</returns>
+    protected static IEnumerable<Toil> CollectBloodToils()
+    {
+        var getNextPack = Toils_JobTransforms.ExtractNextTargetFromQueue(BloodIndex);
+        yield return getNextPack;
+        
+        var gotoBloodHolder = Toils_Goto.GotoThing(BloodIndex, PathEndMode.Touch, true);
+        
+        var pickUpBlood = Toils_Haul.StartCarryThing(BloodIndex, failIfStackCountLessThanJobCount: true,
+            reserve: false,
+            canTakeFromInventory: true);
+        
+        yield return Toils_ET.JumpIfHoldingTarget(BloodIndex, pickUpBlood);
+        yield return Toils_ET.JumpIfSomeoneElseHoldingTarget(BloodIndex, gotoBloodHolder, BloodHolderIndex);
+        
+        // Blood is on the ground
+        yield return Toils_Goto.GotoThing(BloodIndex, PathEndMode.ClosestTouch)
+            .FailOnDespawnedNullOrForbidden(BloodIndex)
+            .FailOnBurningImmobile(BloodIndex);
+        yield return Toils_Jump.Jump(pickUpBlood);
+        
+        // Blood is being carried by someone else
+        yield return gotoBloodHolder;
+        yield return Toils_General.Wait(25).WithProgressBarToilDelay(BloodHolderIndex);
+        
+        // We are at the blood (or it's in our inventory)
+        yield return pickUpBlood;
+        yield return Toils_Jump.JumpIfHaveTargetInQueue(BloodIndex, getNextPack);
     }
     
     private static Toil PerformTransfusion(float duration)
@@ -99,28 +115,20 @@ public class JobDriver_EmergencyTransfusion : JobDriver
             var bloodpack = doctor.CurJob.targetB.Thing;
             if (doctor.skills != null)
             {
-                var xp = duration * 0.1f * ET_DefOf.BloodTransfusion.workSkillLearnFactor; 
-                Log.Message("[ET] Ticks: {0}  XP: {1}".Formatted(duration, xp));
+                var xp = duration * 0.1f * ET_DefOf.BloodTransfusion.workSkillLearnFactor;
                 doctor.skills.Learn(SkillDefOf.Medicine, xp);
             }
-            
-            var packsUsed = doctor.CurJob.count;
 
-            // Reduce bloodloss
-            var bloodloss = patient.health.hediffSet.GetFirstHediffOfDef(HediffDefOf.BloodLoss);
-            if (bloodloss != null)
-                bloodloss.Severity -= packsUsed * Recipe_BloodTransfusion.BloodlossHealedPerPack;
+            // Reduce blood loss
+            var bloodLoss = patient.health.hediffSet.GetFirstHediffOfDef(HediffDefOf.BloodLoss);
+            if (bloodLoss != null)
+                bloodLoss.Severity -= bloodpack.stackCount * Recipe_BloodTransfusion.BloodlossHealedPerPack;
             
             // Add hemogen if the pawn is hemogenic
             if (patient.genes?.GetFirstGeneOfType<Gene_Hemogen>() != null)
-                GeneUtility.OffsetHemogen(patient, packsUsed * JobGiver_GetHemogen.HemogenPackHemogenGain);
+                GeneUtility.OffsetHemogen(patient, bloodpack.stackCount * JobGiver_GetHemogen.HemogenPackHemogenGain);
             
-            // Use up packs
-            if (bloodpack.stackCount > packsUsed)
-                bloodpack.stackCount -= packsUsed;
-            else
-                bloodpack.Destroy();
-
+            bloodpack.Destroy();
             doctor.jobs.EndCurrentJob(JobCondition.Succeeded);
         };
         toil.defaultCompleteMode = ToilCompleteMode.Instant;
