@@ -62,10 +62,10 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
+        <Compile Include="ET_DefOf.cs" />
         <Compile Include="FloatMenuOptionProvider_EmergencyTransfusion.cs" />
         <Compile Include="JobDriver_EmergencyTransfusion.cs" />
         <Compile Include="Properties\AssemblyInfo.cs"/>
-        <Compile Include="Properties\EmergencyTransfusion_DefOf.cs" />
     </ItemGroup>
     <ItemGroup>
       <None Include="packages.config" />

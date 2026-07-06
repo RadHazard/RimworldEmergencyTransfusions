@@ -11,8 +11,6 @@ namespace EmergencyTransfusion;
 [UsedImplicitly]
 public class JobDriver_EmergencyTransfusion : JobDriver
 {
-    public const int TransfusionDuration = 800;
-
     private const TargetIndex PatientIndex = TargetIndex.A;
     private const TargetIndex BloodIndex = TargetIndex.B;
     private const TargetIndex BloodHolderIndex = TargetIndex.C;
@@ -68,17 +66,12 @@ public class JobDriver_EmergencyTransfusion : JobDriver
         var gotoPatient = Toils_Goto.GotoThing(PatientIndex, pathEndMode);
         var gotoBloodHolder = Toils_Goto.GotoThing(BloodHolderIndex, PathEndMode.Touch)
             .FailOn(() => OtherPawnBloodHolder != BloodHolderInventory?.pawn || OtherPawnBloodHolder.IsForbidden(pawn));
-
-        yield return Toils_General.Do(() => Log.Message("[ET] Start looking for blood"));
-        
         yield return Toils_Jump.JumpIf(gotoPatient, () => IsBloodInDoctorInventory);
         yield return Toils_Haul.CheckItemCarriedByOtherPawn(Bloodpack, TargetIndex.C, gotoBloodHolder);
         // Blood is on the ground
         yield return Toils_Goto.GotoThing(BloodIndex, PathEndMode.ClosestTouch)
             .FailOnDespawnedNullOrForbidden(BloodIndex);
-        yield return Toils_General.Do(() => Log.Message("[ET] At blood"));
         yield return Toils_Haul.StartCarryThing(BloodIndex, failIfStackCountLessThanJobCount: true);
-        yield return Toils_General.Do(() => Log.Message("[ET] Carrying blood"));
         yield return Toils_Jump.Jump(gotoPatient);
         // Blood is being carried by pack animal
         yield return gotoBloodHolder;
@@ -87,17 +80,16 @@ public class JobDriver_EmergencyTransfusion : JobDriver
             BloodHolderInventory?.innerContainer, 1, BloodHolderIndex);
         
         // Transfuse into patient
-        yield return Toils_General.Do(() => Log.Message("[ET] Going to patient"));
         yield return gotoPatient;
-        yield return Toils_General.Do(() => Log.Message("[ET] At patient"));
-        yield return Toils_General.WaitWith(PatientIndex, TransfusionDuration,
+        var duration = (int)(ET_DefOf.BloodTransfusion.workAmount / pawn.GetStatValue(ET_DefOf.MedicalOperationSpeed));
+        yield return Toils_General.WaitWith(PatientIndex, duration,
             true, true, true, PatientIndex)
             .WithEffect(() => EffecterDefOf.Surgery, PatientIndex)
             .PlaySustainerOrSound(SoundDefOf.Recipe_Surgery);
-        yield return PerformTransfusion();
+        yield return PerformTransfusion(duration);
     }
     
-    private static Toil PerformTransfusion()
+    private static Toil PerformTransfusion(float duration)
     {
         var toil = ToilMaker.MakeToil();
         toil.initAction = () =>
@@ -107,10 +99,9 @@ public class JobDriver_EmergencyTransfusion : JobDriver
             var bloodpack = doctor.CurJob.targetB.Thing;
             if (doctor.skills != null)
             {
-                //TODO handle XP
-                // var num1 = patient.RaceProps.Animal ? 175f : 500f;
-                // var num2 = thing == null ? 0.5f : thing.def.MedicineTendXpGainFactor;
-                // actor.skills.Learn(SkillDefOf.Medicine, num1 * num2);
+                var xp = duration * 0.1f * ET_DefOf.BloodTransfusion.workSkillLearnFactor; 
+                Log.Message("[ET] Ticks: {0}  XP: {1}".Formatted(duration, xp));
+                doctor.skills.Learn(SkillDefOf.Medicine, xp);
             }
             
             var packsUsed = doctor.CurJob.count;

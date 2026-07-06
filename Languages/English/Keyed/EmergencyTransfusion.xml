@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <LanguageData>
 
-  <ET_Transfuse>Perform emergency transfusion</ET_Transfuse>
+  <ET_Transfuse>Perform emergency blood transfusion</ET_Transfuse>
   <ET_CannotTransfuse>Can't transfuse blood</ET_CannotTransfuse>
   <ET_TransfusionNotRequired>{0} does not have significant blood loss</ET_TransfusionNotRequired>
   <ET_NoBlood>No hemogen packs available</ET_NoBlood>

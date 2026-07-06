@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using EmergencyTransfusion.Properties;
 using JetBrains.Annotations;
 using RimWorld;
 using Verse;
@@ -73,7 +70,7 @@ public class FloatMenuOptionProvider_EmergencyTransfusion : FloatMenuOptionProvi
 
         void Transfuse()
         {
-            var job = JobMaker.MakeJob(EmergencyTransfusion_DefOf.ET_TransfuseBlood, clickedPawn, bloodpack);
+            var job = JobMaker.MakeJob(ET_DefOf.ET_TransfuseBlood, clickedPawn, bloodpack);
             job.count = 1;
             job.draftedTend = true;
             context.FirstSelectedPawn.jobs.TryTakeOrderedJob(job);
