@@ -79,21 +79,22 @@ public class FloatMenuOptionProvider_EmergencyTransfusion : FloatMenuOptionProvi
 
     /// <summary>
     /// Checks whether we can ever apply a transfusion to the target.  Does not check if they actually need it,
-    /// only if we could potentially give one (i.e. they aren't an animal or a hostile). 
-    /// Derived from a similar method in FloatMenuOptionProvider_DraftedTend
+    /// only if we could potentially give one (i.e. they aren't an animal or a hostile).
     /// </summary>
     /// <param name="doctor">The pawn performing the transfusion</param>
     /// <param name="patient">The pawn receiving the transfusion</param>
     /// <returns>True if we can potentially perform the transfusion</returns>
     private static bool IsValidTransfusionTarget(Pawn doctor, Pawn patient)
     {
-        return patient.health.CanBleed &&
-            !patient.IsAnimal &&
-            (patient.Downed || !patient.HostileTo(doctor.Faction)) &&
-            (patient.IsColonist ||
-             patient.IsQuestLodger() ||
-             patient.IsPrisonerOfColony ||
-             patient.IsSlaveOfColony);
+        return patient.RaceProps.Humanlike &&
+               patient.health.CanBleed &&
+               (patient.Downed ||
+                    (!patient.HostileTo(doctor.Faction) &&
+                    (patient.IsColonist ||
+                     patient.IsQuestLodger() ||
+                     patient.IsPrisonerOfColony ||
+                     patient.IsSlaveOfColony))
+               );
     }
 
     /// <summary>
