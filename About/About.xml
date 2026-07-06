@@ -8,9 +8,21 @@
   <supportedVersions>
     <li>1.6</li>
   </supportedVersions>
-  <description>Perform emergency blood transfusions!
+  <modDependencies>
+    <li>
+      <packageId>Ludeon.RimWorld.Biotech</packageId>
+      <displayName>Biotech</displayName>
+    </li>
+  </modDependencies>
+  <description>Perform blood transfusions in the field!
 
-Similar to the drafted "tend now" command, you can now command your doctors to perform an emergency blood transfusion.  Emergency transfusions use 1 hemogen pack, take the same time and restore the same amount of blood as a normal transfusion (35% blood loss).  However, doctors can do it in the field and can use hemogen packs in their inventory, which can save precious seconds when your best pawns are bleeding out.
-
-Additionally, this mod adds an option to have pawns carry hemogen packs in their inventories, found in the assign screen next to medicine.</description>
+Similar to the drafted "tend now" command, you can now command your doctors to perform an emergency blood transfusion without needing to drag them to your hospital first.  Emergency transfusions use 1 hemogen pack, take the same time (13.333 seconds at 100 medical operation speed) and restore the same amount of blood (35% blood loss) as a normal transfusion.  However, doctors can do it in the field and can use hemogen packs from their inventory or the inventory of their patient, which can save precious seconds when your best pawns are bleeding out.
+    
+To perform an emergency transfusion, you need to have a hemogen pack available and the patient must have lost at least 15% of their blood.  The pawn performing the transfusion must also be capable of doctoring.
+    
+Works fine with vanilla, but pairs especially well with any mod that lets pawns pick up and hold things in their inventory, such as:
+  - Pick Up And Haul
+  - Hauler's Dream
+  - Compositable Loadouts
+  - Combat Extended</description>
 </ModMetaData>
