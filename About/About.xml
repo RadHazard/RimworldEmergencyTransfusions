@@ -4,7 +4,7 @@
   <author>Pausbrak</author>
   <packageId>Pausbrak.EmergencyTransfusions</packageId>
   <modVersion IgnoreIfNoMatchingField="True">1.0.0</modVersion>
-  <url>https://github.com/RadHazard/EmergencyTransfusion</url>
+  <url>https://github.com/RadHazard/RimworldEmergencyTransfusions</url>
   <supportedVersions>
     <li>1.6</li>
   </supportedVersions>
