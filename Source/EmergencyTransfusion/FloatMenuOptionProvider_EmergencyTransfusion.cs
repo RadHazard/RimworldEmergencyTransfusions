@@ -132,7 +132,7 @@ public class FloatMenuOptionProvider_EmergencyTransfusion : FloatMenuOptionProvi
 
         return bloodpack;
             
-        bool CanReserve(Thing m) => !m.IsForbidden(doctor) && doctor.CanReserve((LocalTargetInfo)m, 10, 1);
+        bool CanReserve(Thing m) => !m.IsForbidden(doctor) && !m.IsForbidden(doctor.Faction) && doctor.CanReserve((LocalTargetInfo)m, 10, 1);
 
         Thing? GetBloodInInventory(ThingOwner inventory)
         {
