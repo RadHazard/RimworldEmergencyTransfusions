@@ -7,5 +7,6 @@
   <ET_TransfusionNotRequired>{0} does not have significant blood loss</ET_TransfusionNotRequired>
   <ET_NoBlood>No hemogen packs available</ET_NoBlood>
   <ET_NotEnoughBlood>Can't transfuse more than 1 hemogen pack: Not enough hemogen packs available</ET_NotEnoughBlood>
+  <ET_ReceivingTransfusion>Receiving blood transfusion</ET_ReceivingTransfusion>
 
 </LanguageData>

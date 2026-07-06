@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using JetBrains.Annotations;
 using RimWorld;
-using UnityEngine;
 using Verse;
 using Verse.AI;
 
@@ -14,12 +13,14 @@ public class JobDriver_EmergencyTransfusion : JobDriver
     private const TargetIndex PatientIndex = TargetIndex.A;
     private const TargetIndex BloodIndex = TargetIndex.B;
     private const TargetIndex BloodHolderIndex = TargetIndex.C;
+
+    private float transfusionWorkLeft;
+    private int ticksSpentTransfusing;
     
     private PathEndMode pathEndMode;
     
     protected Pawn Patient => job.targetA.Pawn;
 
-    protected Pawn OtherPawnBloodHolder => job.targetC.Pawn;
 
     public override void ExposeData()
     {
@@ -36,6 +37,8 @@ public class JobDriver_EmergencyTransfusion : JobDriver
             pathEndMode = PathEndMode.InteractionCell;
         else
             pathEndMode = PathEndMode.ClosestTouch;
+
+        ticksSpentTransfusing = 0;
     }
 
     public override bool TryMakePreToilReservations(bool errorOnFailed)
@@ -57,26 +60,18 @@ public class JobDriver_EmergencyTransfusion : JobDriver
         this.FailOnDespawnedNullOrForbidden(PatientIndex);
         this.FailOnAggroMentalState(PatientIndex);
 
-        // Collect the blood
         foreach (var toil in CollectBloodToils()) yield return toil;
 
-        // Transfuse into patient
         yield return Toils_Goto.GotoThing(PatientIndex, pathEndMode);
-        //TODO - this checks the operation speed when the pawn starts the job, not when they actually reach the patient
-        //we need to make a custom wait toil to fix this
-        var duration = (int)(ET_DefOf.BloodTransfusion.workAmount / pawn.GetStatValue(ET_DefOf.MedicalOperationSpeed));
-        yield return Toils_General.WaitWith(PatientIndex, duration,
-            true, true, true, PatientIndex)
-            .WithEffect(() => EffecterDefOf.Surgery, PatientIndex)
-            .PlaySustainerOrSound(SoundDefOf.Recipe_Surgery);
-        yield return PerformTransfusion(duration);
+        yield return PerformTransfusion();
+        yield return ApplyTransfusionEffects();
     }
 
     /// <summary>
     /// Makes a loop of toils for collecting all the blood packs
     /// </summary>
     /// <returns>The collection toils</returns>
-    protected static IEnumerable<Toil> CollectBloodToils()
+     protected static IEnumerable<Toil> CollectBloodToils()
     {
         var getNextPack = Toils_JobTransforms.ExtractNextTargetFromQueue(BloodIndex);
         yield return getNextPack;
@@ -105,17 +100,79 @@ public class JobDriver_EmergencyTransfusion : JobDriver
         yield return Toils_Jump.JumpIfHaveTargetInQueue(BloodIndex, getNextPack);
     }
     
-    private static Toil PerformTransfusion(float duration)
+    /// <summary>
+    /// A toil representing doing the transfusion work.
+    /// Handles the delay, tracking work speed, and freezing the target pawn, but does not apply any actual effects. 
+    /// </summary>
+    /// <returns></returns>
+    private Toil PerformTransfusion()
     {
         var toil = ToilMaker.MakeToil();
-        toil.initAction = () =>
+        toil.initAction = (Action) (() =>
+        {
+            var doctor = toil.actor;
+            var curJob = doctor.jobs.curJob;
+            var curDriver = (JobDriver_EmergencyTransfusion) doctor.jobs.curDriver;
+            var patient = curJob.GetTarget(PatientIndex).Pawn;
+            
+            doctor.pather.StopDead();
+            Toils_ET.ForceWaitIndefinite(patient, maintainPosture: true, maintainSleep: true,
+                reportStringOverride:"ET_ReceivingTransfusion".Translate());
+            
+            curDriver.transfusionWorkLeft = ET_DefOf.BloodTransfusion.workAmount;
+            curDriver.ticksSpentTransfusing = 0;
+        });
+        toil.tickIntervalAction = delta =>
+        {
+            var doctor = toil.actor;
+            var curDriver = (JobDriver_EmergencyTransfusion) doctor.jobs.curDriver;
+
+            doctor.rotationTracker.FaceTarget(doctor.CurJob.GetTarget(PatientIndex));
+            
+            curDriver.ticksSpentTransfusing += delta;
+            curDriver.transfusionWorkLeft -= delta * doctor.GetStatValue(ET_DefOf.MedicalOperationSpeed);
+            
+            if (curDriver.transfusionWorkLeft <= 0.0)
+                curDriver.ReadyForNextToil();
+        };
+        toil.handlingFacing = true;
+        toil.activeSkill = () => SkillDefOf.Medicine;
+        toil.defaultCompleteMode = ToilCompleteMode.Never;
+        toil.WithProgressBar(TargetIndex.A, (Func<float>)(() =>
+        {
+            var doctor = toil.actor;
+            var curDriver = (JobDriver_EmergencyTransfusion) doctor.jobs.curDriver;
+            return (float)(1.0 - curDriver.transfusionWorkLeft / ET_DefOf.BloodTransfusion.workAmount);
+        }));
+        toil.WithEffect(() => EffecterDefOf.Surgery, PatientIndex);
+        toil.PlaySustainerOrSound(SoundDefOf.Recipe_Surgery);
+        toil.FailOnDespawnedOrNull(PatientIndex);
+        toil.FailOnCannotTouch(PatientIndex, pathEndMode);
+        toil.AddFinishAction(() =>
+        {
+            var patient = toil.actor.CurJob.GetTarget(PatientIndex).Pawn;
+            patient.jobs.EndCurrentJob(JobCondition.Succeeded);
+        });
+        return toil;
+    }
+    
+    /// <summary>
+    /// A toil that applies the effects of a successful transfusion.
+    /// This includes restoring blood, adding hemogen, and training doctor XP
+    /// </summary>
+    /// <returns></returns>
+    private Toil ApplyTransfusionEffects()
+    {
+        var toil = ToilMaker.MakeToil();
+        toil.initAction = (Action) (() =>
         {
             var doctor = toil.actor;
             var patient = doctor.CurJob.targetA.Pawn;
             var bloodpack = doctor.CurJob.targetB.Thing;
+            var jobDriver = (JobDriver_EmergencyTransfusion) doctor.jobs.curDriver;
             if (doctor.skills != null)
             {
-                var xp = duration * 0.1f * ET_DefOf.BloodTransfusion.workSkillLearnFactor;
+                var xp = jobDriver.ticksSpentTransfusing * 0.1f * ET_DefOf.BloodTransfusion.workSkillLearnFactor;
                 doctor.skills.Learn(SkillDefOf.Medicine, xp);
             }
 
@@ -123,15 +180,16 @@ public class JobDriver_EmergencyTransfusion : JobDriver
             var bloodLoss = patient.health.hediffSet.GetFirstHediffOfDef(HediffDefOf.BloodLoss);
             if (bloodLoss != null)
                 bloodLoss.Severity -= bloodpack.stackCount * Recipe_BloodTransfusion.BloodlossHealedPerPack;
-            
+        
             // Add hemogen if the pawn is hemogenic
             if (patient.genes?.GetFirstGeneOfType<Gene_Hemogen>() != null)
                 GeneUtility.OffsetHemogen(patient, bloodpack.stackCount * JobGiver_GetHemogen.HemogenPackHemogenGain);
-            
+        
             bloodpack.Destroy();
             doctor.jobs.EndCurrentJob(JobCondition.Succeeded);
-        };
+        });
         toil.defaultCompleteMode = ToilCompleteMode.Instant;
+        toil.atomicWithPrevious = true;
         return toil;
     }
 }
