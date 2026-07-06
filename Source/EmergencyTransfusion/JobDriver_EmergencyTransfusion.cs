@@ -26,6 +26,8 @@ public class JobDriver_EmergencyTransfusion : JobDriver
     {
         base.ExposeData();
         Scribe_Values.Look(ref pathEndMode, "pathEndMode");
+        Scribe_Values.Look(ref transfusionWorkLeft, "transfusionWorkLeft");
+        Scribe_Values.Look(ref ticksSpentTransfusing, "ticksSpentTransfusing");
     }
 
     public override void Notify_Starting()
@@ -82,8 +84,8 @@ public class JobDriver_EmergencyTransfusion : JobDriver
             reserve: false,
             canTakeFromInventory: true);
         
-        yield return Toils_ET.JumpIfHoldingTarget(BloodIndex, pickUpBlood);
-        yield return Toils_ET.JumpIfSomeoneElseHoldingTarget(BloodIndex, gotoBloodHolder, BloodHolderIndex);
+        yield return ET_Toils.JumpIfHoldingTarget(BloodIndex, pickUpBlood);
+        yield return ET_Toils.JumpIfSomeoneElseHoldingTarget(BloodIndex, gotoBloodHolder, BloodHolderIndex);
         
         // Blood is on the ground
         yield return Toils_Goto.GotoThing(BloodIndex, PathEndMode.ClosestTouch)
@@ -116,7 +118,7 @@ public class JobDriver_EmergencyTransfusion : JobDriver
             var patient = curJob.GetTarget(PatientIndex).Pawn;
             
             doctor.pather.StopDead();
-            Toils_ET.ForceWaitIndefinite(patient, maintainPosture: true, maintainSleep: true,
+            ET_PawnUtils.ForceWaitIndefinite(patient, maintainPosture: true, maintainSleep: true,
                 reportStringOverride:"ET_ReceivingTransfusion".Translate());
             
             curDriver.transfusionWorkLeft = ET_DefOf.BloodTransfusion.workAmount;
@@ -130,7 +132,7 @@ public class JobDriver_EmergencyTransfusion : JobDriver
             doctor.rotationTracker.FaceTarget(doctor.CurJob.GetTarget(PatientIndex));
             
             curDriver.ticksSpentTransfusing += delta;
-            curDriver.transfusionWorkLeft -= delta * doctor.GetStatValue(ET_DefOf.MedicalOperationSpeed);
+            curDriver.transfusionWorkLeft -= delta * doctor.GetStatValue(ET_DefOf.BloodTransfusion.workSpeedStat);
             
             if (curDriver.transfusionWorkLeft <= 0.0)
                 curDriver.ReadyForNextToil();

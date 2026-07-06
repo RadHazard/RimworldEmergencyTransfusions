@@ -14,15 +14,28 @@
       <displayName>Biotech</displayName>
     </li>
   </modDependencies>
-  <description>Perform blood transfusions in the field!
+  <description>Perform blood transfusions in the field! 
 
-Similar to the drafted "tend now" command, you can now command your doctors to perform an emergency blood transfusion without needing to drag them to your hospital first.  Emergency transfusions use 1 hemogen pack, take the same time (13.333 seconds at 100 medical operation speed) and restore the same amount of blood (35% blood loss) as a normal transfusion.  However, doctors can do it in the field and can use hemogen packs from their inventory or the inventory of their patient, which can save precious seconds when your best pawns are bleeding out.
-    
+Similar to the drafted "tend now" command, you can now command your doctors to perform an emergency blood transfusion without needing to drag them to your hospital first.  Emergency transfusions work just like normal transfusions, taking the same amount of time and restoring the same amount of blood.  However, doctors can do them in the field and can use hemogen packs from their inventory or the inventory of their patient, which can save precious seconds when your best pawns are bleeding out.
+
 To perform an emergency transfusion, you need to have a hemogen pack available and the patient must have lost at least 15% of their blood.  The pawn performing the transfusion must also be capable of doctoring.
-    
-Works fine with vanilla, but pairs especially well with any mod that lets pawns pick up and hold things in their inventory, such as:
-  - Pick Up And Haul
-  - Hauler's Dream
-  - Compositable Loadouts
-  - Combat Extended</description>
+
+&lt;size=20&gt;How It Works&lt;/size&gt;
+When using searching for blood packs, the doctor will prefer to use them in the following order:
+- Packs in the patient's inventory
+- Packs in the doctor's inventory
+- Any packs on the ground or held by a caravan animal, from closest to furthest
+
+This allows you to give your most vulnerable pawns their own supply of blood packs, while preserving the doctor's supply for pawns that aren't carrying any.
+
+To take advantage of this feature, it is recommended to use a mod that allows pawns to automatically carry things in their inventory, such as:
+- Compositable Loadouts
+- Combat Extended
+
+&lt;size=20&gt;Compatability Notes&lt;/size&gt;
+The emergency transfusion job inherits as much as it can from the original transfusion job.  If another mod changes the original def (e.g. making it faster or slower or changing how much XP it gives), this mod should automatically pick up those changes.
+
+The only exception is the amount of blood loss healed per pack, and the object that serves as a blood pack.  Both are currently hard-coded.
+
+When scanning for blood packs, this mod looks in the inventories of the doctor and the patient.  Any mod that uses the vanilla inventory system to hold items *should* work just fine.  Tested with Pick Up and Haul, Hauler's Dream, Combat Extended, and Compositable Loadouts.  Other mods that place items in the inventory are untested but should work as well.  </description>
 </ModMetaData>
