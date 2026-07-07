@@ -1,9 +1,9 @@
 # Rimworld Emergency Blood Transfusions
 Perform blood transfusions in the field!
 
-Similar to the drafted "tend now" command, you can now command your doctors to perform an emergency blood transfusion without needing to drag them to your hospital first.  Emergency transfusions work just like normal transfusions, taking the same amount of time and restoring the same amount of blood.  However, doctors can do them in the field and can use hemogen packs from their inventory or the inventory of their patient, which can save precious seconds when your best pawns are bleeding out.
+Similar to the drafted "tend now" command, you can now command your doctors to perform an emergency blood transfusion without needing to drag them to your hospital first.  Emergency transfusions work just like normal transfusions, taking the same amount of time (13.333 seconds, modified by medical operation speed) and restoring the same amount of blood (35% per hemogen pack).  However, doctors can do them in the field and can use hemogen packs from their inventory or the inventory of their patient, which can save precious seconds when your best pawns are bleeding out.
 
-To perform an emergency transfusion, you need to have a hemogen pack available and the patient must have lost at least 15% of their blood.  The pawn performing the transfusion must also be capable of doctoring.
+To perform an emergency transfusion, you need to have at least one hemogen pack available and the patient must have lost at least 15% of their blood.  The pawn performing the transfusion must also be capable of doctoring.  You can choose to transfuse either a single hemogen pack or as many packs as the patient needs (or as many as the doctor can find, whichever is lower).
 
 ### How It Works
 
