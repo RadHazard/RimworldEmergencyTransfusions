@@ -5,6 +5,8 @@ Similar to the drafted "tend now" command, you can now command your doctors to p
 
 To perform an emergency transfusion, you need to have at least one hemogen pack available and the patient must have lost at least 15% of their blood.  The pawn performing the transfusion must also be capable of doctoring.  You can choose to transfuse either a single hemogen pack or as many packs as the patient needs (or as many as the doctor can find, whichever is lower).
 
+Transfusions can be given to humanlike pawns you control, or to downed humanlike pawns from any faction. Animals are not permitted, as they cannot receive normal transfusions either. More or less, if you could schedule a transfusion bill on them, you should be able to perform an emergency transfusion on them.
+
 ### How It Works
 
 When using searching for blood packs, the doctor will prefer to use them in the following order:
